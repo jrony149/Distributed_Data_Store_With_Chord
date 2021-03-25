@@ -32,25 +32,50 @@ class State():
         self.storage = {}
 
         self.gen_finger_table(self.view)
-        self.data_structure_clear()
+        #self.data_structure_clear()
     
     def gen_finger_table(self, view):
         self.num_of_fingers_and_virtual_nodes = int(math.log(len(view), 2))
+        app.logger.info("Here's self.num_of_fingers_and_virtual_nodes: " + str(self.num_of_fingers_and_virtual_nodes))
         for address in view:
             self.hash_and_store_address(address)
         self.indices = sorted(self.map.keys())
+        app.logger.info("here's self.indices: " + str(self.indices))
         for x in range(len(self.indices)):#your circular linked list is populated
-            self.cl.add((self.indices[x], self.map[self.indices[x]]))
+            self.cl.add([self.indices[x], self.map[self.indices[x]], 0]) #the third element is a marker to help determine where
+                                                                         #where the first finger of each v-node points to.
         self.list_of_local_ids = [key for key in self.map if self.map[key] == self.address]
         for x in range(len(self.list_of_local_ids)):
             self.cl.findID(self.list_of_local_ids[x])
             for y in range(self.num_of_fingers_and_virtual_nodes):
                 for z in range(2**y):
                     self.cl.moveNext()
-                self.finger_table.append(self.cl.getCursorData())
+                element_to_append = self.cl.getCursorData()
+                if y == 0: element_to_append[2] = 1
+                self.finger_table.append(element_to_append)
                 self.cl.findID(self.list_of_local_ids[x])
 
         self.finger_table = sorted(self.finger_table)#sorting the finger table to prep it for binary search.
+        app.logger.info("Here's the finger table once gen_finger_table() is done: " + str(self.finger_table))
+
+    def maps_to(self, key):
+        #binary search the key greater than the key provided
+        key_hash = State.hash_key(key)
+        #if smallest value seen, or greatest value, this key should be stored in the first node. 
+        if self.finger_table[0][0] >= key_hash or self.finger_table[-1][0] < key_hash:
+            return self.finger_table[-1][1]
+        l,r = 0, len(self.finger_table)-2
+        # Find the section of this key in the ring.
+        while(l < r):
+            mid = (l+r)//2
+            if self.finger_table[mid][0] <= key_hash and self.finger_table[mid+1][0] >= key_hash:
+                return self.map[self.finger_table[mid+1][0]]
+            elif self.finger_table[mid][0] > key_hash:
+                r = mid
+            elif self.finger_table[mid+1][0] < key_hash:
+                l = mid+1
+        
+        return self.finger_table[-1][1]
 
     def data_structure_clear(self):
         self.cl.deleteAll()
@@ -58,31 +83,21 @@ class State():
         self.list_of_local_ids.clear()
         self.indices.clear()
 
-    def hash_and_store_address(self, address):
+    def hash_and_store_address(self, address): #create "self.num_of_fingers_and_virtual_nodes" number of
+                                               #v-nodes, unless the [floor of log(base 2) of the number of
+                                               #actual up and running nodes] is 1.  In that case, just hash the address once
+                                               # and add it to the map. 
         hash = State.hash_key(address)
-        for _ in range((self.num_of_fingers_and_virtual_nodes - 1)):
-            self.map[hash] = address
-            hash = State.hash_key(hash)
+        if(self.num_of_fingers_and_virtual_nodes > 1):
+            for _ in range((self.num_of_fingers_and_virtual_nodes) - 1):
+                self.map[hash] = address
+                hash = State.hash_key(hash)
+                self.map[hash] = address
+        else:
             self.map[hash] = address
 
-    def maps_to(self, key):
-        #binary search the key greater than the key provided
-        key_hash = State.hash_key(key)
-        #if smallest value seen, or greatest value, this key should be stored in the first node. 
-        if self.finger_table[0][0] >= key_hash or self.finger_table[-1][0] < key_hash:
-            return self.finger_table[0][1]
-        l,r = 0, len(self.finger_table)-2
-        # Find the section of this key in the ring.
-        while(l < r):
-            mid = (l+r)//2
-            if self.finger_table[mid][0] <= key_hash and self.finger_table[mid+1][0] >= key_hash:
-                return self.finger_table[mid+1][1]
-            elif self.finger_table[mid][0] > key_hash:
-                r = mid
-            elif self.finger_table[mid+1][0] < key_hash:
-                l = mid+1
-        
-        return self.finger_table[-1]
+
+    
 
     @staticmethod
     def hash_key(key):
