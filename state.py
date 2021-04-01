@@ -25,6 +25,7 @@ class State():
         # list_of_local_ids a list of all the ids that correspond with the local node's address
         self.list_of_local_ids = []
         self.set_of_local_ids = set()
+        self.lowest_hash_id = ""
         # The number of node replica for one address.
         #self.node_replica = self.num_of_fingers_and_virtual_nodes
         # the total number of keys in the map
@@ -59,7 +60,7 @@ class State():
 
     def maps_to(self, key):
         return_dict = {}
-        app.logger.info("Here's key: " + str(key))
+        #app.logger.info("Here's key: " + str(key))
         if key < self.finger_table[0][0]: #In this case, send it to the store of self.finger_table[0](meaning
             #send it to the upper bound)
             return_dict["upper bound"] = self.finger_table[0]
@@ -118,10 +119,12 @@ class State():
                                                #actual up and running nodes] is 1.  In that case, just hash the address once
                                                # and add it to the map. 
         hash = State.hash_key(address)
+        if address == self.address: self.lowest_hash_id = hash
         if(self.num_of_fingers_and_virtual_nodes > 1):
             for _ in range((self.num_of_fingers_and_virtual_nodes) - 1):
                 self.map[hash] = address
                 hash = State.hash_key(hash)
+                if hash < self.lowest_hash_id: self.lowest_hash_id = hash
                 self.map[hash] = address
         else:
             self.map[hash] = address

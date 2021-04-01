@@ -6,34 +6,34 @@
 # --data '{"value": "127"}' \
 # http://localhost:13801/kvs/keys/x
 
-curl --request   PUT \
- --header    "Content-Type: application/json" \
- --write-out "%{http_code}\n" \
- --data '{"value": "127"}' \
- http://localhost:13801/kvs/keys/v
-
-echo "---------------------------------------------------------------------------------------------------------------------------------"
-
 curl --request   GET \
  --header    "Content-Type: application/json" \
  --write-out "%{http_code}\n" \
  --data '{"value": "127"}' \
-http://localhost:13801/kvs/keys/v
+ http://localhost:13801/kvs/keys/ignominious
 
-echo "----------------------------------------------------------------------------------------------------------------------------------"
+#echo "---------------------------------------------------------------------------------------------------------------------------------"
+
+#curl --request   GET \
+# --header    "Content-Type: application/json" \
+# --write-out "%{http_code}\n" \
+# --data '{"value": "127"}' \
+#http://localhost:13801/kvs/keys/v
+
+#echo "----------------------------------------------------------------------------------------------------------------------------------"
 
 
-curl --request   PUT \
- --header    "Content-Type: application/json" \
- --write-out "%{http_code}\n" \
- --data '{"value": "127"}' \
- http://localhost:13801/store_key/v
+#curl --request   PUT \
+# --header    "Content-Type: application/json" \
+# --write-out "%{http_code}\n" \
+# --data '{"value": "127"}' \
+# http://localhost:13801/store_key/v
 
-echo "-----------------------------------------------------------------------------------------------------------------------------------"
+#echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
 
-curl --request GET \
- --header "Content-Type: application/json" \
- --write-out "%{http_code}\n" \
- http://localhost:13801/recon
+#curl --request GET \
+# --header "Content-Type: application/json" \
+# --write-out "%{http_code}\n" \
+# http://localhost:13801/recon
 

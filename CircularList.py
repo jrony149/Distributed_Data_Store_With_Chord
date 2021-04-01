@@ -2,7 +2,8 @@
 class Node:    
     def __init__(self,data):    
         self.data = data    
-        self.next = None    
+        self.next = None
+        self.previous = None    
      
 class CreateList:    
     #Declaring head and tail pointer as null.    
@@ -10,15 +11,23 @@ class CreateList:
         self.head = Node(None)    
         self.tail = Node(None)    
         self.head.next = self.tail    
-        self.tail.next = self.head  
+        self.tail.next = self.head 
+        self.tail.previous = self.head
+        self.head.previous = self.tail 
         self.cursor = -1
         self.length = 0
     
     def moveHead(self):
         self.cursor = self.head 
     
+    def moveTail(self):
+        self.cursor = self.tail
+    
     def moveNext(self):
         self.cursor = self.cursor.next 
+    
+    def movePrevious(self):
+        self.cursor = self.cursor.previous
     
     def getCursorData(self):
         if self.cursor != -1:
@@ -35,15 +44,16 @@ class CreateList:
             #If list is empty, both head and tail would point to new node.    
             self.head = newNode    
             self.tail = newNode    
-            newNode.next = self.head
             self.length += 1    
         else:    
             #tail will point to new node.    
-            self.tail.next = newNode  
+            self.tail.next = newNode 
+            newNode.previous = self.tail 
             #New node will become new tail.    
             self.tail = newNode  
             #Since, it is circular linked list tail will point to head.    
             self.tail.next = self.head
+            self.head.previous = self.tail
             self.length += 1  
    
      
