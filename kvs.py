@@ -132,7 +132,7 @@ def get(key):
     id = state.hash_key(key)
     address = state.maps_to(id)
 
-    return json.dumps({"here's state.lowest_hash_id":state.lowest_hash_id,"here's the key's hashed id":id, "here's the address that the key maps to in this node's ft":address}), 200
+    return json.dumps({"lowest_hash_id":state.lowest_hash_id,"lowest hash id's predecessor":state.predecessor,"here's the key's hashed id":id, "here's the address that the key maps to in this node's ft":address}), 200
 
 
 @app.route('/store_key/<key>', methods = ['PUT'])

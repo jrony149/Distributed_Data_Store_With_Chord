@@ -32,6 +32,7 @@ class State():
         self.indices = []
         # The primary kv store.
         self.storage = {}
+        self.predecessor = None
 
         self.gen_finger_table(self.view)
         #self.data_structure_clear()
@@ -43,7 +44,9 @@ class State():
         self.indices = sorted(self.map.keys())
         for x in range(len(self.indices)):#your circular linked list is populated
             self.cl.add([self.indices[x], self.map[self.indices[x]], 0]) #the third element is a marker to help determine where
-                                                                         #where the first finger of each v-node points to.
+        self.cl.findID(self.lowest_hash_id) 
+        self.cl.movePrevious()
+        self.predecessor = self.cl.getCursorData()                                                               #where the first finger of each v-node points to.
         self.list_of_local_ids = sorted([key for key in self.map if self.map[key] == self.address])
         self.set_of_local_ids  = set(self.list_of_local_ids)
         for x in range(len(self.list_of_local_ids)):
@@ -105,9 +108,6 @@ class State():
         #this should be unreachable
         return -1
             
-
-
-
     def data_structure_clear(self):
         self.cl.deleteAll()
         self.map.clear()
@@ -127,7 +127,7 @@ class State():
                 if hash < self.lowest_hash_id: self.lowest_hash_id = hash
                 self.map[hash] = address
         else:
-            self.map[hash] = address
+            self.lowest_hash_id,self.map[hash] = hash,address
 
 
     
