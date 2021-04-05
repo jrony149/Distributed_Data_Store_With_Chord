@@ -6,11 +6,11 @@
 # --data '{"value": "127"}' \
 # http://localhost:13801/kvs/keys/x
 
-curl --request   GET \
+curl --request   PUT \
  --header    "Content-Type: application/json" \
  --write-out "%{http_code}\n" \
  --data '{"value": "127"}' \
- http://localhost:13801/kvs/keys/ignominious
+ http://localhost:13807/kvs/keys/conglomerate
 
 #echo "---------------------------------------------------------------------------------------------------------------------------------"
 

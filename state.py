@@ -59,21 +59,14 @@ class State():
                 self.finger_table.append(element_to_append)
                 self.cl.findID(self.list_of_local_ids[x])
 
-        self.finger_table = sorted(self.finger_table)#sorting the finger table to prep it for binary search.
+        temp_list = []
+        [temp_list.append(x) for x in self.finger_table if x not in temp_list]
+
+        self.finger_table = sorted(temp_list)#sorting the finger table and removing duplicates 
+                                                                #to prep it for binary search.
 
     def maps_to(self, key):
         return_dict = {}
-        #app.logger.info("Here's key: " + str(key))
-        if key < self.finger_table[0][0]: #In this case, send it to the store of self.finger_table[0](meaning
-            #send it to the upper bound)
-            return_dict["upper bound"] = self.finger_table[0]
-            return_dict["lower bound"] = None
-            return return_dict
-        if key > self.finger_table[-1][0]: #In this case, send it to the GET or PUT addr of self.finger_table[-1]
-            return_dict["lower bound"] = self.finger_table[-1]
-            return_dict["upper bound"] = None 
-            return return_dict
-
         low,mid,high = 0,0,(len(self.finger_table) - 1)
         
         while low <= high:
@@ -119,15 +112,16 @@ class State():
                                                #actual up and running nodes] is 1.  In that case, just hash the address once
                                                # and add it to the map. 
         hash = State.hash_key(address)
+        
         if address == self.address: self.lowest_hash_id = hash
         if(self.num_of_fingers_and_virtual_nodes > 1):
             for _ in range((self.num_of_fingers_and_virtual_nodes) - 1):
                 self.map[hash] = address
                 hash = State.hash_key(hash)
-                if hash < self.lowest_hash_id: self.lowest_hash_id = hash
+                if ((hash < self.lowest_hash_id) and (address == self.address)): self.lowest_hash_id = hash
                 self.map[hash] = address
         else:
-            self.lowest_hash_id,self.map[hash] = hash,address
+            self.map[hash] = address
 
 
     

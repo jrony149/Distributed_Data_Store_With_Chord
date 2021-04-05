@@ -8,9 +8,9 @@ curl --request GET \
 echo "--------------------------------------------------------------------------------------------"
 
 curl --request GET \
- --header "Content-Type: application/json" \
- --write-out "%{http_code}\n" \
- http://localhost:13802/kvs/keys/v
+--header "Content-Type: application/json" \
+--write-out "%{http_code}\n" \
+http://localhost:13802/kvs/keys/v
 
 echo "--------------------------------------------------------------------------------------------"
 
@@ -35,4 +35,23 @@ curl --request GET \
 
 echo "--------------------------------------------------------------------------------------------"
 
+curl --request GET \
+ --header "Content-Type: application/json" \
+ --write-out "%{http_code}\n" \
+ http://localhost:13806/kvs/keys/v
 
+echo "--------------------------------------------------------------------------------------------"
+
+curl --request GET \
+ --header "Content-Type: application/json" \
+ --write-out "%{http_code}\n" \
+ http://localhost:13807/kvs/keys/v
+
+echo "--------------------------------------------------------------------------------------------"
+
+curl --request GET \
+ --header "Content-Type: application/json" \
+ --write-out "%{http_code}\n" \
+ http://localhost:13808/kvs/keys/v
+
+echo "--------------------------------------------------------------------------------------------"
