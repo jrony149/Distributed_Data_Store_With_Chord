@@ -6,11 +6,10 @@
 # --data '{"value": "127"}' \
 # http://localhost:13801/kvs/keys/x
 
-curl --request   PUT \
+curl --request  DELETE \
  --header    "Content-Type: application/json" \
  --write-out "%{http_code}\n" \
- --data '{"value": "127"}' \
- http://localhost:13807/kvs/keys/conglomerate
+ http://localhost:13803/kvs/keys/h
 
 #echo "---------------------------------------------------------------------------------------------------------------------------------"
 
