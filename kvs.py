@@ -6,6 +6,9 @@ from state import State
 import logging
 import sys
 import _thread
+import threading 
+import copy
+import concurrent.futures
 
 global state
 @app.before_first_request
@@ -16,16 +19,77 @@ def build_state():
 def sender(location, extension, key, request_type, payload):
     resp = ""
     if request_type == "p":
-        resp = requests.put(f'http://{location}/{extension}/{key}', json = payload, timeout=6, headers = {"Content-Type": "application/json"})
+        resp = requests.put(f'http://{location}/{extension}/{key}', json=payload, timeout=6, headers = {"Content-Type": "application/json"})
     elif request_type == "g":
         resp = requests.get(f'http://{location}/{extension}/{key}', json = payload, timeout=6, headers = {"Content-Type": "application/json"})
     elif request_type == "d":
         resp = requests.delete(f'http://{location}/{extension}/{key}', json = payload, timeout=6, headers = {"Content-Type": "application/json"})
-
+    elif request_type == "v":
+        resp = requests.put(f'http://{location}/{extension}', json = payload, timeout=6, headers = {"Content-Type": "application/json"})
+    elif request_type == "s":
+        resp = requests.get(f'http://{location}/{extension}',timeout=6, headers = {"Content-Type": "application/json"})
     resp_data = resp.json()
     return resp_data, resp.status_code
 
 ################################################### Main Endpoints #######################################################################
+
+@app.route('/kvs/view-change', methods=['PUT'])
+def view_change():
+
+    view_str = request.get_json()["view"]
+    view_list = sorted(view_str.split(','))
+
+    payload = {"view":view_list}
+
+    threads = []
+    for address in range(len(state.view)):
+        threads.append(threading.Thread(target=sender, args=(state.view[address],"view-change-action",None,"v",payload)))
+        threads[-1].start()
+    for thread in threads:
+        thread.join()
+    threads.clear()
+
+    shards = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(sender,view_list[x],"kvs/key-count",None,"s",None) for x in range(len(view_list))]
+    result_collection = [f.result() for f in futures]
+    for x in range(len(result_collection)):
+        shards.append({"address":view_list[x],"key-count":result_collection[x][0]["key-count"]})
+        app.logger.info("here's result " + str(x) + " " + str(result_collection[x][0]["key-count"]))
+
+    return json.dumps({"message":"View change successful","shards":shards}), 200
+
+
+
+    #Here is where you need to poll each node in the new view, gather their key counts,
+    #and return this information to the client.
+
+
+@app.route('/view-change-action', methods=['PUT'])
+def view_change_action():
+    new_view = request.get_json()["view"]
+    if new_view == state.view:
+        return json.dumps({"view change successful":"success!"}),200
+
+    previous_ids_and_preds = copy.deepcopy(state.list_of_local_ids_and_preds)
+
+    state.gen_finger_table(new_view)
+
+    app.logger.info("Here's the finger table after view change: " + str(state.finger_table))
+
+    app.logger.info("\n")
+
+    app.logger.info("previous ids and preds: " + str(previous_ids_and_preds) + "\n")
+    app.logger.info("current ids and preds: " + str(state.list_of_local_ids_and_preds))
+
+
+    #here is where you need to perform your necessary view change actions - 
+    #including checking to see if the local node needs to have its keys re-sent
+    #and if it does, re-sending them.  In the /kvs/view-change function is where the
+    #nodes in the new view will be polled and the key-count of each shard will be returned to the client 
+    
+
+
 
 @app.route('/kvs/keys/<key>', methods=['PUT'])
 def handle_put(key):
@@ -155,7 +219,7 @@ def delete(key):
     return json.dumps({"doesExist":False,"error":"Key does not exist","message":"Error in DELETE"}), 404
 
 
-######################################## Assessment Endpoints ##############################################
+######################################## Administrative Endpoints ##############################################
 
 
 @app.route('/recon', methods=['GET'])
@@ -173,8 +237,13 @@ def get(key):
     id = state.hash_key(key)
     #address = state.maps_to(id)
 
-    return json.dumps({"lowest_hash_id":state.lowest_hash_id,"lowest hash id's predecessor":state.predecessor,"here's the key's hashed id":id}), 200
+    return json.dumps({"lowest_hash_id":state.lowest_hash_id,"lowest hash id's predecessor":state.predecessor,"here's the key_local_ids_and_preds":state.list_of_local_ids_and_preds}), 200
 
+@app.route('/view_request', methods=["GET"])
+def return_view():
+    global state
+    return json.dumps({"state.view":state.view}), 200
+    
 @app.route('/kvs/key-count', methods=['GET'])
 def count():
     global state

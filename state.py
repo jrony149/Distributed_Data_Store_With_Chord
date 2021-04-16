@@ -24,19 +24,31 @@ class State():
         self.finger_table = []
         # list_of_local_ids a list of all the ids that correspond with the local node's address
         self.list_of_local_ids = []
+        #creating a set from the list of local ids to be used with the 'in' keyword for improved time complexity
         self.set_of_local_ids = set()
+        #will be set by gen_finger_table() - this is the lowest hash id for the local node
         self.lowest_hash_id = ""
-        # The number of node replica for one address.
-        #self.node_replica = self.num_of_fingers_and_virtual_nodes
         # the total number of keys in the map
         self.indices = []
         # The primary kv store.
         self.storage = {}
+        # The predecessor hash id of the position on the ring just before the lowest hash id of the local node.
+        self.list_of_local_ids_and_preds = []
         self.predecessor = None
 
         self.gen_finger_table(self.view)
-        #self.data_structure_clear()
-    
+        self.data_structure_clear()
+
+    def gather_ids_and_preds(self):
+        return_list = []
+        for x in range(len(self.list_of_local_ids)):
+            self.cl.findID(self.list_of_local_ids[x])
+            self.cl.movePrevious()
+            if self.list_of_local_ids[x] == self.lowest_hash_id:
+                self.predecessor = self.cl.getCursorData()
+            return_list.append([self.list_of_local_ids[x], self.cl.getCursorData()])
+        return return_list
+        
     def gen_finger_table(self, view):
         self.num_of_fingers_and_virtual_nodes = int(math.log(len(view), 2))
         for address in view:
@@ -44,11 +56,9 @@ class State():
         self.indices = sorted(self.map.keys())
         for x in range(len(self.indices)):#your circular linked list is populated
             self.cl.add([self.indices[x], self.map[self.indices[x]], 0]) #the third element is a marker to help determine where
-        self.cl.findID(self.lowest_hash_id) 
-        self.cl.movePrevious()
-        self.predecessor = self.cl.getCursorData()                                                               #where the first finger of each v-node points to.
         self.list_of_local_ids = sorted([key for key in self.map if self.map[key] == self.address])
         self.set_of_local_ids  = set(self.list_of_local_ids)
+        self.list_of_local_ids_and_preds = self.gather_ids_and_preds()
         for x in range(len(self.list_of_local_ids)):
             self.cl.findID(self.list_of_local_ids[x])
             for y in range(self.num_of_fingers_and_virtual_nodes):
@@ -64,6 +74,7 @@ class State():
 
         self.finger_table = sorted(temp_list)#sorting the finger table and removing duplicates 
                                                                 #to prep it for binary search.
+        #here you should really call self.data_structure_clear()
 
     def maps_to(self, key):
         return_dict = {}
@@ -104,7 +115,7 @@ class State():
     def data_structure_clear(self):
         self.cl.deleteAll()
         self.map.clear()
-        self.list_of_local_ids.clear()
+        #self.list_of_local_ids.clear()
         self.indices.clear()
 
     def hash_and_store_address(self, address): #create "self.num_of_fingers_and_virtual_nodes" number of
