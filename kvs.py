@@ -41,13 +41,12 @@ def view_change():
 
     payload = {"view":view_list}
 
-    threads = []
-    for address in range(len(state.view)):
-        threads.append(threading.Thread(target=sender, args=(state.view[address],"view-change-action",None,"v",payload)))
-        threads[-1].start()
-    for thread in threads:
-        thread.join()
-    threads.clear()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(sender,state.view[x],"view-change-action",None,"v",payload) for x in range(len(state.view))]
+    result_collection = [f.result() for f in futures]
+    for x in range(len(result_collection)):
+        if result_collection[x][1] != 200:
+            return json.dumps({"message":"view change unsuccessful"}), 500
 
     shards = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -55,15 +54,8 @@ def view_change():
     result_collection = [f.result() for f in futures]
     for x in range(len(result_collection)):
         shards.append({"address":view_list[x],"key-count":result_collection[x][0]["key-count"]})
-        app.logger.info("here's result " + str(x) + " " + str(result_collection[x][0]["key-count"]))
-
+        #app.logger.info("here's result " + str(x) + " " + str(result_collection[x]))
     return json.dumps({"message":"View change successful","shards":shards}), 200
-
-
-
-    #Here is where you need to poll each node in the new view, gather their key counts,
-    #and return this information to the client.
-
 
 @app.route('/view-change-action', methods=['PUT'])
 def view_change_action():
