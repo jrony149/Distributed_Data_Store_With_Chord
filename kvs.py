@@ -41,13 +41,14 @@ def view_change():
 
     payload = {"view":view_list}
 
+    #broadcasting the view
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(sender,state.view[x],"view-change-action",None,"v",payload) for x in range(len(state.view))]
     result_collection = [f.result() for f in futures]
     for x in range(len(result_collection)):
         if result_collection[x][1] != 200:
             return json.dumps({"message":"view change unsuccessful"}), 500
-
+    #polling the shards and gathering the key-counts
     shards = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(sender,view_list[x],"kvs/key-count",None,"s",None) for x in range(len(view_list))]
@@ -55,24 +56,40 @@ def view_change():
     for x in range(len(result_collection)):
         shards.append({"address":view_list[x],"key-count":result_collection[x][0]["key-count"]})
         #app.logger.info("here's result " + str(x) + " " + str(result_collection[x]))
+
     return json.dumps({"message":"View change successful","shards":shards}), 200
 
 @app.route('/view-change-action', methods=['PUT'])
 def view_change_action():
-    new_view = request.get_json()["view"]
-    if new_view == state.view:
-        return json.dumps({"view change successful":"success!"}),200
+
+    set_of_ids_and_preds,new_view,fail_flag = [],request.get_json()["view"],False
+    
+    if new_view == state.view: return json.dumps({"view change successful":"success!"}),200
 
     previous_ids_and_preds = copy.deepcopy(state.list_of_local_ids_and_preds)
-
     state.gen_finger_table(new_view)
 
-    app.logger.info("Here's the finger table after view change: " + str(state.finger_table))
+    for x in range(len(state.list_of_local_ids_and_preds)):
+        if state.list_of_local_ids_and_preds[x] in previous_ids_and_preds:
+            set_of_ids_and_preds.append(state.list_of_local_ids_and_preds[x])
 
-    app.logger.info("\n")
+    if len(set_of_ids_and_preds) == 0:
+        for key in state.storage:
+            payload = {"value":state.storage[key]}
+            response = sender(state.address,"kvs/keys",key,"p",payload)
+            if response[1] != 200 and response[1] != 201: fail_flag = True
+    else:
+        for key in state.storage:
+            key_hash_id = state.hash_key(key)
+            result = state.find_range(key_hash_id, set_of_ids_and_preds)
+            if not result:
+                payload = {"value":state.storage[key]} 
+                response = sender(state.address,"kvs/keys",key,"p",payload)
+                if response[1] != 200 and response[1] != 201: fail_flag = True
 
-    app.logger.info("previous ids and preds: " + str(previous_ids_and_preds) + "\n")
-    app.logger.info("current ids and preds: " + str(state.list_of_local_ids_and_preds))
+    if fail_flag: return json.dumps({"message":"redistribution of data unsuccessful."}), 500            
+    return json.dumps({"message":"redistribution of data successful."}), 200
+
 
 
     #here is where you need to perform your necessary view change actions - 

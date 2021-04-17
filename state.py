@@ -32,12 +32,12 @@ class State():
         self.indices = []
         # The primary kv store.
         self.storage = {}
-        # The predecessor hash id of the position on the ring just before the lowest hash id of the local node.
+        # The list of local hash ids and their predecessors for use in determining if a key needs to be re-sent or not.
         self.list_of_local_ids_and_preds = []
+        # The predecessor hash id of the position on the ring just before the lowest hash id of the local node.
         self.predecessor = None
 
         self.gen_finger_table(self.view)
-        self.data_structure_clear()
 
     def gather_ids_and_preds(self):
         return_list = []
@@ -72,9 +72,8 @@ class State():
         temp_list = []
         [temp_list.append(x) for x in self.finger_table if x not in temp_list]
 
-        self.finger_table = sorted(temp_list)#sorting the finger table and removing duplicates 
-                                                                #to prep it for binary search.
-        #here you should really call self.data_structure_clear()
+        self.finger_table = sorted(temp_list)
+        self.data_structure_clear()
 
     def maps_to(self, key):
         return_dict = {}
@@ -111,6 +110,25 @@ class State():
                 high = mid - 1
         #this should be unreachable
         return -1
+
+    def find_range(self, key_hash_id, list_of_ranges):
+
+        if len(list_of_ranges) == 1:
+            lower_bound,upper_bound = list_of_ranges[0][1][0],list_of_ranges[0][0]
+            if key_hash_id > lower_bound and key_hash_id < upper_bound: return True
+            elif key_hash_id > lower_bound and lower_bound > upper_bound:return True
+            else:return False
+
+        low,mid,high = 0,0,(len(list_of_ranges) - 1)
+        while low <= high:
+            mid,lower_bound,upper_bound = ((high + low) // 2),list_of_ranges[mid][1][0],list_of_ranges[mid][0]
+            if key_hash_id > lower_bound and key_hash_id < upper_bound:return True
+            elif key_hash_id > lower_bound and lower_bound > upper_bound: return True
+            elif key_hash_id == list_of_ranges[mid][1][0]:return True
+            elif key_hash_id < lower_bound:high = mid - 1
+            elif key_hash_id > upper_bound:low = mid + 1
+        return False
+
             
     def data_structure_clear(self):
         self.cl.deleteAll()
@@ -118,10 +136,7 @@ class State():
         #self.list_of_local_ids.clear()
         self.indices.clear()
 
-    def hash_and_store_address(self, address): #create "self.num_of_fingers_and_virtual_nodes" number of
-                                               #v-nodes, unless the [floor of log(base 2) of the number of
-                                               #actual up and running nodes] is 1.  In that case, just hash the address once
-                                               # and add it to the map. 
+    def hash_and_store_address(self, address):
         hash = State.hash_key(address)
         
         if address == self.address: self.lowest_hash_id = hash

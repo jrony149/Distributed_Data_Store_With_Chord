@@ -6,11 +6,10 @@
 # --data '{"value": "127"}' \
 # http://localhost:13801/kvs/keys/x
 
-curl --request  PUT \
+curl --request  GET \
  --header    "Content-Type: application/json" \
  --write-out "%{http_code}\n" \
- --data '{"value":"127"}' \
- http://localhost:13802/kvs/keys/h
+ http://localhost:13802/kvs/keys/e
 
 #echo "---------------------------------------------------------------------------------------------------------------------------------"
 
