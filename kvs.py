@@ -38,16 +38,22 @@ def view_change():
 
     view_str = request.get_json()["view"]
     view_list = sorted(view_str.split(','))
-
-    payload = {"view":view_list}
+    payload = {"view":view_list,"address":state.address}
 
     #broadcasting the view
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(sender,state.view[x],"view-change-action",None,"v",payload) for x in range(len(state.view))]
-    result_collection = [f.result() for f in futures]
-    for x in range(len(result_collection)):
-        if result_collection[x][1] != 200:
-            return json.dumps({"message":"view change unsuccessful"}), 500
+    threads = []
+    for address in range(len(state.view)):
+        threads.append(threading.Thread(target=sender, args=(state.view[address],"view-change-action",None,"v",payload)))
+        threads[-1].start()
+    for thread in threads:
+        thread.join()
+    state.view = view_list
+    # with concurrent.futures.ThreadPoolExecutor() as executor:
+    #     futures = [executor.submit(sender,state.view[x],"view-change-action",None,"v",payload) for x in range(len(state.view))]
+    # result_collection = [f.result() for f in futures]
+    # for x in range(len(result_collection)):
+    #     if result_collection[x][1] != 200:
+    #         return json.dumps({"message":"view change unsuccessful"}), 500
     #polling the shards and gathering the key-counts
     shards = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -56,35 +62,42 @@ def view_change():
     for x in range(len(result_collection)):
         shards.append({"address":view_list[x],"key-count":result_collection[x][0]["key-count"]})
         #app.logger.info("here's result " + str(x) + " " + str(result_collection[x]))
-
     return json.dumps({"message":"View change successful","shards":shards}), 200
 
 @app.route('/view-change-action', methods=['PUT'])
 def view_change_action():
 
-    set_of_ids_and_preds,new_view,fail_flag = [],request.get_json()["view"],False
-    
+    set_of_ids_and_preds,fail_flag= [],False
+    new_view,incoming_address = request.get_json()["view"],request.get_json()["address"]
     if new_view == state.view: return json.dumps({"view change successful":"success!"}),200
 
     previous_ids_and_preds = copy.deepcopy(state.list_of_local_ids_and_preds)
-    state.gen_finger_table(new_view)
+    state.finger_table.clear()
+
+    if state.address in new_view:
+        if incoming_address != state.address: state.view = new_view 
+        state.gen_finger_table(new_view)
 
     for x in range(len(state.list_of_local_ids_and_preds)):
         if state.list_of_local_ids_and_preds[x] in previous_ids_and_preds:
             set_of_ids_and_preds.append(state.list_of_local_ids_and_preds[x])
 
     if len(set_of_ids_and_preds) == 0:
-        for key in state.storage:
+        delete_dict = copy.deepcopy(state.storage)
+        for key in delete_dict:
             payload = {"value":state.storage[key]}
-            response = sender(state.address,"kvs/keys",key,"p",payload)
+            del state.storage[key]
+            response = sender(new_view[0],"kvs/keys",key,"p",payload)
             if response[1] != 200 and response[1] != 201: fail_flag = True
     else:
-        for key in state.storage:
+        delete_dict = copy.deepcopy(state.storage)
+        for key in delete_dict:
             key_hash_id = state.hash_key(key)
             result = state.find_range(key_hash_id, set_of_ids_and_preds)
             if not result:
-                payload = {"value":state.storage[key]} 
-                response = sender(state.address,"kvs/keys",key,"p",payload)
+                payload = {"value":state.storage[key]}
+                del state.storage[key]
+                response = sender(new_view[0],"kvs/keys",key,"p",payload)
                 if response[1] != 200 and response[1] != 201: fail_flag = True
 
     if fail_flag: return json.dumps({"message":"redistribution of data unsuccessful."}), 500            

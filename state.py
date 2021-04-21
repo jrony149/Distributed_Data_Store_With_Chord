@@ -68,17 +68,14 @@ class State():
                 if y == 0: element_to_append[2] = 1
                 self.finger_table.append(element_to_append)
                 self.cl.findID(self.list_of_local_ids[x])
-
         temp_list = []
         [temp_list.append(x) for x in self.finger_table if x not in temp_list]
-
         self.finger_table = sorted(temp_list)
         self.data_structure_clear()
 
     def maps_to(self, key):
         return_dict = {}
         low,mid,high = 0,0,(len(self.finger_table) - 1)
-        
         while low <= high:
             mid = (high + low) // 2
             if self.finger_table[mid][0] <= key and self.finger_table[mid+1][0] >= key:
@@ -95,19 +92,13 @@ class State():
         return return_dict
 
     def immediate_pred(self, first_finger):
-
-        if first_finger >= self.list_of_local_ids[-1]:
-            return self.list_of_local_ids[-1]
-
+        if first_finger >= self.list_of_local_ids[-1]: return self.list_of_local_ids[-1]
         low,mid,high = 0,0,(len(self.list_of_local_ids) - 1)
         while low <= high:
             mid = (high + low) // 2
-            if self.list_of_local_ids[mid] <= first_finger and self.list_of_local_ids[mid+1] >= first_finger:
-                return self.list_of_local_ids[mid] 
-            elif self.list_of_local_ids[mid] < first_finger:
-                low = mid + 1
-            elif self.list_of_local_ids[mid] > first_finger:
-                high = mid - 1
+            if self.list_of_local_ids[mid] <= first_finger and self.list_of_local_ids[mid+1] >= first_finger: return self.list_of_local_ids[mid] 
+            elif self.list_of_local_ids[mid] < first_finger: low = mid + 1
+            elif self.list_of_local_ids[mid] > first_finger: high = mid - 1
         #this should be unreachable
         return -1
 
@@ -116,15 +107,15 @@ class State():
         if len(list_of_ranges) == 1:
             lower_bound,upper_bound = list_of_ranges[0][1][0],list_of_ranges[0][0]
             if key_hash_id > lower_bound and key_hash_id < upper_bound: return True
-            elif key_hash_id > lower_bound and lower_bound > upper_bound:return True
+            elif key_hash_id > lower_bound and lower_bound > upper_bound: return True
             else:return False
 
         low,mid,high = 0,0,(len(list_of_ranges) - 1)
         while low <= high:
             mid,lower_bound,upper_bound = ((high + low) // 2),list_of_ranges[mid][1][0],list_of_ranges[mid][0]
-            if key_hash_id > lower_bound and key_hash_id < upper_bound:return True
+            if key_hash_id > lower_bound and key_hash_id < upper_bound: return True
             elif key_hash_id > lower_bound and lower_bound > upper_bound: return True
-            elif key_hash_id == list_of_ranges[mid][1][0]:return True
+            elif key_hash_id == list_of_ranges[mid][1][0]: return True
             elif key_hash_id < lower_bound:high = mid - 1
             elif key_hash_id > upper_bound:low = mid + 1
         return False
@@ -138,7 +129,6 @@ class State():
 
     def hash_and_store_address(self, address):
         hash = State.hash_key(address)
-        
         if address == self.address: self.lowest_hash_id = hash
         if(self.num_of_fingers_and_virtual_nodes > 1):
             for _ in range((self.num_of_fingers_and_virtual_nodes) - 1):
@@ -148,10 +138,7 @@ class State():
                 self.map[hash] = address
         else:
             self.map[hash] = address
-
-
     
-
     @staticmethod
     def hash_key(key):
         return sha1(key.encode('utf-8')).hexdigest()

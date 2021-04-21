@@ -72,18 +72,26 @@ class CreateList:
                 print(current.data),
 
     def deleteAll(self):
-        temp = self.head    
-        if temp is None:
-            print("\n Not possible to delete empty list.")
-        while temp:
-            self.head = temp.next
-            temp.data = None
-            temp = None
-            temp = self.head
-            if temp == self.tail:
-                temp.data = None
-                temp = None
-                break
+        self.head = Node(None)    
+        self.tail = Node(None)    
+        self.head.next = self.tail    
+        self.tail.next = self.head 
+        self.tail.previous = self.head
+        self.head.previous = self.tail 
+        self.cursor = -1
+        self.length = 0
+        # temp = self.head    
+        # if temp is None:
+        #     print("\n Not possible to delete empty list.")
+        # while temp:
+        #     self.head = temp.next
+        #     temp.data = None
+        #     temp = None
+        #     temp = self.head
+        #     if temp == self.tail:
+        #         temp.data = None
+        #         temp = None
+        #         break
 
     def findID(self, searchID):
 
