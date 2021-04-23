@@ -100,7 +100,6 @@ def view_change_action():
             key_hash_id = state.hash_key(key)
             result = state.find_range(key_hash_id, set_of_ids_and_preds)
             if not result:
-                app.logger.info("HELLO FROM no result SUB CASE!!!!")
                 payload = {"value":state.storage[key]}
                 del state.storage[key]
                 response = sender(new_view[0],"kvs/keys",key,"p",payload)
