@@ -64,7 +64,6 @@ def view_change_action():
     set_of_ids_and_preds,fail_flag= [],False
     new_view,incoming_address = request.get_json()["view"],request.get_json()["address"]
     if new_view == state.view: 
-        app.logger.info("HELLO FROM new_view == state.view!!!")
         return json.dumps({"view change successful":"success!"}),200
 
     previous_ids_and_preds = copy.deepcopy(state.list_of_local_ids_and_preds)
@@ -74,9 +73,11 @@ def view_change_action():
         if incoming_address != state.address: state.view = new_view 
         state.gen_finger_table(new_view)
         
-        for x in range(len(state.list_of_local_ids_and_preds)):#if state.address is in the new view, then we have generated a new 
-                                                               #finger table, and we likewise have a new state.list_of_local_ids_and_preds.
-                                                               # and so we need our set_of_ids_and_preds to be populated
+        for x in range(len(state.list_of_local_ids_and_preds)):#if state.address is in the new view, then we must generate a new 
+                                                               # finger table, and we likewise have a new state.list_of_local_ids_and_preds
+                                                               # because it has been created by the gen_finger_table() function
+                                                               # which calls the gather_ids_and_preds() function.
+                                                               # This is because we need our set_of_ids_and_preds to be populated
                                                                # for use starting on line 100. (the final else case below)
             if state.list_of_local_ids_and_preds[x] in previous_ids_and_preds:
                 set_of_ids_and_preds.append(state.list_of_local_ids_and_preds[x])
@@ -87,7 +88,6 @@ def view_change_action():
                                                                         # to new_view[0] and let the ping pong algo take care of it.
                                                                         #Likewise, do the same if set_of_ids_and_preds is empty because
                                                                         #there are no ranges that exist in both old view and new view.
-        app.logger.info("HELLO FROM set_of_ids_and_preds == 0 !!!!!!!")
         delete_dict = copy.deepcopy(state.storage)
         for key in delete_dict:
             payload = {"value":state.storage[key]}
@@ -95,7 +95,6 @@ def view_change_action():
             response = sender(new_view[0],"kvs/keys",key,"p",payload)
             if response[1] != 200 and response[1] != 201: fail_flag = True
     else:
-        app.logger.info("Hello from ELSE CASE!!!!!!")
         delete_dict = copy.deepcopy(state.storage)
         for key in delete_dict:
             key_hash_id = state.hash_key(key)
@@ -110,16 +109,6 @@ def view_change_action():
     if fail_flag: return json.dumps({"message":"redistribution of data unsuccessful."}), 500            
     return json.dumps({"message":"redistribution of data successful."}), 200
 
-
-
-    #here is where you need to perform your necessary view change actions - 
-    #including checking to see if the local node needs to have its keys re-sent
-    #and if it does, re-sending them.  In the /kvs/view-change function is where the
-    #nodes in the new view will be polled and the key-count of each shard will be returned to the client 
-    
-
-
-
 @app.route('/kvs/keys/<key>', methods=['PUT'])
 def handle_put(key):
 
@@ -132,6 +121,8 @@ def handle_put(key):
     payload["value"],address_present  = data["value"],"address" in data
     payload["address"]                = data["address"] if address_present else state.address 
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"p",payload)
+    if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:
+        return sender(state.finger_table[0][1],"store_key",key,"p",payload)
     if key_hash_id < state.finger_table[0][0]:
         if (key_hash_id < state.lowest_hash_id) and (key_hash_id < state.predecessor[0]) and (state.predecessor[0] > state.lowest_hash_id):
             return sender(state.address,"store_key",key,"p",payload)
@@ -153,15 +144,14 @@ def handle_put(key):
 def handle_get(key):
     
     global state 
-    key_hash_id,payload,data,json_present = state.hash_key(key),{},{},True
+    key_hash_id,payload,data = state.hash_key(key),{},request.get_json()
 
-    try: data                           = request.get_json()
-    except Exception as e: json_present = False
-
-    if not json_present: payload["address"] = state.address
-    if json_present: payload["address"]     = data["address"] 
+    address_present = "address" in data
+    payload["address"] = data["address"] if address_present else state.address
     
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"g",payload)
+    if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:
+        return sender(state.finger_table[0][1],"store_key",key,"g",payload)
     if key_hash_id < state.finger_table[0][0]:
         if (key_hash_id < state.lowest_hash_id) and (key_hash_id < state.predecessor[0]) and (state.predecessor[0] > state.lowest_hash_id):
             return sender(state.address,"store_key",key,"g",payload)
@@ -183,15 +173,14 @@ def handle_get(key):
 def handle_delete(key):
 
     global state 
-    key_hash_id,payload,data,json_present = state.hash_key(key),{},{},True
+    key_hash_id,payload,data = state.hash_key(key),{},request.get_json()
 
-    try: data = request.get_json()
-    except Exception as e: json_present = False
+    address_present = "address" in data
+    payload["address"] = data["address"] if address_present else state.address
 
-    if not json_present: payload["address"] = state.address
-    if json_present: payload["address"]     = data["address"] 
-    
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"d",payload)
+    if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:
+        return sender(state.finger_table[0][1],"store_key",key,"d",payload)
     if key_hash_id < state.finger_table[0][0]:
         if (key_hash_id < state.lowest_hash_id) and (key_hash_id < state.predecessor[0]) and (state.predecessor[0] > state.lowest_hash_id):
             return sender(state.address,"store_key",key,"d",payload)
@@ -221,8 +210,8 @@ def store(key):
     message            = "Updated successfully" if replace else "Added successfully"
     status_code        = 200 if replace else 201
     state.storage[key] = data["value"]
-    if data["address"] == state.address: return json.dumps({"message":message,"replace":replace}), status_code
-    else: return json.dumps({"message":message,"replace":replace,"address":state.address}), status_code
+    if data["address"] == state.address: return json.dumps({"message":message,"replaced":replace}), status_code
+    else: return json.dumps({"message":message,"replaced":replace,"address":state.address}), status_code
 
 @app.route('/store_key/<key>', methods=['GET'])
 def retrieve(key):
@@ -259,14 +248,14 @@ def recon():
     for _ in range(state.cl.getLength()):
         array.append(state.cl.getCursorData())
         state.cl.moveNext()
-    return json.dumps({"linked list data":array,"length of linked list":state.cl.getLength(),"state.view":state.view, "finger table":state.finger_table, "local store":state.storage, "map":state.map})
+    return json.dumps({"linked list data":array,"length of linked list":state.cl.getLength(),"state.view":state.view, "finger table":state.finger_table,"length of finger table":len(state.finger_table),"local store":state.storage, "map":state.map})
 
 @app.route('/data_request/<key>', methods=['GET'])
 def get(key):
     id = state.hash_key(key)
     #address = state.maps_to(id)
 
-    return json.dumps({"lowest_hash_id":state.lowest_hash_id,"lowest hash id's predecessor":state.predecessor,"here's the key_local_ids_and_preds":state.list_of_local_ids_and_preds}), 200
+    return json.dumps({"key hash id":id,"lowest_hash_id":state.lowest_hash_id,"lowest hash id's predecessor":state.predecessor,"here's the key_local_ids_and_preds":state.list_of_local_ids_and_preds}), 200
 
 @app.route('/view_request', methods=["GET"])
 def return_view():
