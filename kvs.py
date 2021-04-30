@@ -31,18 +31,39 @@ def sender(location, extension, key, request_type, payload):
     resp_data = resp.json()
     return resp_data, resp.status_code
 
+def full_send(new_view, route):
+
+    global state
+    fail_flag = False
+    delete_dict = copy.deepcopy(state.storage)
+    for key in delete_dict:
+        payload = {"value":state.storage[key],"address":state.address}
+        del state.storage[key]
+        response = sender(new_view[0],route,key,"p",payload)
+        if response[1] != 200 and response[1] != 201: fail_flag = True
+
+    if fail_flag: return json.dumps({"message":"redistribution of data unsuccessful."}), 500            
+    return json.dumps({"message":"redistribution of data successful."}), 200
+    
+
 ################################################### Main Endpoints #######################################################################
 
 @app.route('/kvs/view-change', methods=['PUT'])
 def view_change():
 
+    global state
     view_str = request.get_json()["view"]
     view_list = sorted(view_str.split(','))
     payload = {"view":view_list,"address":state.address}
 
+    state_view_set = set(state.view)
+    new_view_set   = set(view_list)
+    broadcast_set  = new_view_set.union(state_view_set)
+
+
     #broadcasting the view
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(sender,state.view[x],"view-change-action",None,"v",payload) for x in range(len(state.view))]
+        futures = [executor.submit(sender,address,"view-change-action",None,"v",payload) for address in broadcast_set]
     result_collection = [f.result() for f in futures]
     for x in range(len(result_collection)):
         if result_collection[x][1] != 200:
@@ -61,10 +82,14 @@ def view_change():
 @app.route('/view-change-action', methods=['PUT'])
 def view_change_action():
 
+    global state
     set_of_ids_and_preds,fail_flag= [],False
     new_view,incoming_address = request.get_json()["view"],request.get_json()["address"]
     if new_view == state.view: 
         return json.dumps({"view change successful":"success!"}),200
+
+    if len(new_view) == 1:
+        return full_send(new_view,"store_key")
 
     previous_ids_and_preds = copy.deepcopy(state.list_of_local_ids_and_preds)
     state.finger_table.clear()
@@ -88,13 +113,8 @@ def view_change_action():
                                                                         # to new_view[0] and let the ping pong algo take care of it.
                                                                         #Likewise, do the same if set_of_ids_and_preds is empty because
                                                                         #there are no ranges that exist in both old view and new view.
-        delete_dict = copy.deepcopy(state.storage)
-        for key in delete_dict:
-            payload = {"value":state.storage[key]}
-            del state.storage[key]
-            response = sender(new_view[0],"kvs/keys",key,"p",payload)
-            if response[1] != 200 and response[1] != 201: fail_flag = True
-    else:
+        return full_send(new_view, "kvs/keys")
+    if len(set_of_ids_and_preds) >= 1:
         delete_dict = copy.deepcopy(state.storage)
         for key in delete_dict:
             key_hash_id = state.hash_key(key)
@@ -118,7 +138,8 @@ def handle_put(key):
     global state 
     key_hash_id,payload               = state.hash_key(key),{}
     payload["value"],address_present  = data["value"],"address" in data
-    payload["address"]                = data["address"] if address_present else state.address 
+    payload["address"]                = data["address"] if address_present else state.address
+    if state.single_node_view_address != None: return sender(state.single_node_view_address,"store_key",key,"p",payload)
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"p",payload)
     if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:
         return sender(state.finger_table[0][1],"store_key",key,"p",payload)
@@ -147,7 +168,8 @@ def handle_get(key):
 
     address_present = "address" in data
     payload["address"] = data["address"] if address_present else state.address
-    
+
+    if state.single_node_view_address != None: return sender(state.single_node_view_address,"store_key",key,"g",payload)
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"g",payload)
     if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:
         return sender(state.finger_table[0][1],"store_key",key,"g",payload)
@@ -176,6 +198,8 @@ def handle_delete(key):
 
     address_present = "address" in data
     payload["address"] = data["address"] if address_present else state.address
+
+    if state.single_node_view_address != None: return sender(state.single_node_view_address,"store_key",key,"d",payload)
 
     if key_hash_id in state.set_of_local_ids: return sender(state.address,"store_key",key,"d",payload)
     if key_hash_id > state.lowest_hash_id and state.finger_table[0][0] < state.lowest_hash_id:

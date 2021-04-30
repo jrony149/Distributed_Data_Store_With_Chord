@@ -18,6 +18,8 @@ class State():
         self.num_of_fingers_and_virtual_nodes = 0  #int(math.log(len(self.view), 2))
         # self.address is address of the current node.
         self.address = os.environ.get('ADDRESS')
+        # will be assigned to the address of the single node in the view if view only consists of single node.
+        self.single_node_view_address = None
         # self.map stores the hash value to address mapping.
         self.map = {}
         # self.finger_table stores "fingers" of the local node
@@ -50,6 +52,10 @@ class State():
         return return_list
         
     def gen_finger_table(self, view):
+        if len(view) == 1: 
+            self.single_node_view_address = view[0]
+            return 0
+        self.single_node_view_address = None
         self.num_of_fingers_and_virtual_nodes = int(math.log(len(view), 2))
         for address in view:
             self.hash_and_store_address(address)
@@ -72,6 +78,7 @@ class State():
         [temp_list.append(x) for x in self.finger_table if x not in temp_list]
         self.finger_table = sorted(temp_list)
         self.data_structure_clear()
+        return 0
 
     def maps_to(self, key):
         return_dict = {}
