@@ -6,6 +6,7 @@ import random
 import threading
 from CircularList import CreateList
 import math
+import copy
 
 class State():
     def __init__(self):
@@ -34,14 +35,23 @@ class State():
         self.indices = []
         # The primary kv store.
         self.storage = {}
-        # The list of local hash ids and their predecessors for use in determining if a key needs to be re-sent or not.
+        # the previous view to be compared to the current view by the distribute data function.
+        self.previous_view = []
+        # The previous list of local hash ids and their predecessors for use in determining if a key needs to be re-sent or not.
+        self.previous_local_ids_and_preds = []
+        # The current list of local hash ids and their predecessors for use in determining if a key needs to be re-sent or not.
         self.list_of_local_ids_and_preds = []
         # The predecessor hash id of the position on the ring just before the lowest hash id of the local node.
         self.predecessor = None
-
+        # lowest index position on ring.
+        self.min_address = None
+        # greatest index position on ring.
+        self.max_address = None
+        # Generating the first finger table of the node upon startup.
         self.gen_finger_table(self.view)
 
     def gather_ids_and_preds(self):
+        self.previous_local_ids_and_preds = copy.deepcopy(self.list_of_local_ids_and_preds)
         return_list = []
         for x in range(len(self.list_of_local_ids)):
             self.cl.findID(self.list_of_local_ids[x])
@@ -56,10 +66,12 @@ class State():
             self.single_node_view_address = view[0]
             return 0
         self.single_node_view_address = None
+        self.cl.deleteAll()
         self.num_of_fingers_and_virtual_nodes = int(math.log(len(view), 2))
-        for address in view:
-            self.hash_and_store_address(address)
+        for address in view: self.hash_and_store_address(address)
         self.indices = sorted(self.map.keys())
+        min_index,max_index = min(self.indices),max(self.indices)
+        self.min_address,self.max_address = [min_index,self.map[min_index]],[max_index,self.map[max_index]]
         for x in range(len(self.indices)):#your circular linked list is populated
             self.cl.add([self.indices[x], self.map[self.indices[x]], 0]) #the third element is a marker to help determine where
         self.list_of_local_ids = sorted([key for key in self.map if self.map[key] == self.address])
@@ -129,7 +141,7 @@ class State():
 
             
     def data_structure_clear(self):
-        self.cl.deleteAll()
+        #self.cl.deleteAll()
         self.map.clear()
         #self.list_of_local_ids.clear()
         self.indices.clear()
