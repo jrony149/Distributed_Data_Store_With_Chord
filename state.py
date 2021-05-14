@@ -62,11 +62,7 @@ class State():
         return return_list
         
     def gen_finger_table(self, view):
-        if len(view) == 1: 
-            self.single_node_view_address = view[0]
-            return 0
-        self.single_node_view_address = None
-        self.cl.deleteAll()
+        if len(view) == 1: return 0
         self.num_of_fingers_and_virtual_nodes = int(math.log(len(view), 2))
         for address in view: self.hash_and_store_address(address)
         self.indices = sorted(self.map.keys())
@@ -101,10 +97,8 @@ class State():
                 return_dict["lower bound"] = self.finger_table[mid]
                 return_dict["upper bound"] = self.finger_table[mid+1]
                 return return_dict
-            elif self.finger_table[mid][0] < key:
-                low = mid + 1
-            elif self.finger_table[mid][0] > key:
-                high = mid - 1
+            elif self.finger_table[mid][0] < key: low = mid + 1
+            elif self.finger_table[mid][0] > key: high = mid - 1
         # This should be unreachable
         return_dict["upper bound"] = None
         return_dict["lower bound"] = None
@@ -125,25 +119,22 @@ class State():
 
         if len(list_of_ranges) == 1:
             lower_bound,upper_bound = list_of_ranges[0][1][0],list_of_ranges[0][0]
-            if key_hash_id > lower_bound and key_hash_id < upper_bound: return True
-            elif key_hash_id > lower_bound and lower_bound > upper_bound: return True
-            else:return False
+            if key_hash_id > lower_bound and key_hash_id <= upper_bound: return True
+            else: return False
 
         low,mid,high = 0,0,(len(list_of_ranges) - 1)
+        app.logger.info("Hello from find_range 2!!")
         while low <= high:
             mid,lower_bound,upper_bound = ((high + low) // 2),list_of_ranges[mid][1][0],list_of_ranges[mid][0]
-            if key_hash_id > lower_bound and key_hash_id < upper_bound: return True
-            elif key_hash_id > lower_bound and lower_bound > upper_bound: return True
+            if key_hash_id > lower_bound and key_hash_id <= upper_bound: return True
             elif key_hash_id == list_of_ranges[mid][1][0]: return True
             elif key_hash_id < lower_bound:high = mid - 1
             elif key_hash_id > upper_bound:low = mid + 1
         return False
 
-            
     def data_structure_clear(self):
-        #self.cl.deleteAll()
+        self.cl.deleteAll()
         self.map.clear()
-        #self.list_of_local_ids.clear()
         self.indices.clear()
 
     def hash_and_store_address(self, address):
@@ -155,8 +146,7 @@ class State():
                 hash = State.hash_key(hash)
                 if ((hash < self.lowest_hash_id) and (address == self.address)): self.lowest_hash_id = hash
                 self.map[hash] = address
-        else:
-            self.map[hash] = address
+        else: self.map[hash] = address
     
     @staticmethod
     def hash_key(key):

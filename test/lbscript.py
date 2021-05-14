@@ -121,17 +121,17 @@ async def tests():
         sendKeys(20, url11), sendKeys(20, url12), 
         sendKeys(20, url13), sendKeys(20, url14)])
 
-        time.sleep(180)
+        time.sleep(6)
 
         #doing our view changes and distribution quality checks
         print("#################################################################")
         print("100 key dispersal across 5 nodes {v, w, x, y, z}")
         print("The balance quality is " + balanceQuality(listOfPorts))
         print("#################################################################\n")
-        subprocess.call("./recon.sh")
+        subprocess.call("./view_hashes.sh")
 
         sendViewChange({"view":"10.10.0.4:13800,10.10.0.6:13800,10.10.0.7:13800,10.10.0.8:13800"}, url)
-        time.sleep(180)
+        time.sleep(6)
         print("#################################################################")
         print("View change triggered.  {v, w, x, y, z} -> {v, x, y, z}")
         print("The balance quality is " + balanceQuality([listOfPorts[0], listOfPorts[2], listOfPorts[3], listOfPorts[4]]))
@@ -141,10 +141,10 @@ async def tests():
         if(keyCountAtW != "0"):
             print("The number of keys stored at deprecated node w is: " + colored(keyCountAtW, "red"))
         print("#################################################################\n")
-        subprocess.call("./recon.sh")
+        subprocess.call("./view_hashes.sh")
 
         sendViewChange({"view":"10.10.0.4:13800,10.10.0.7:13800,10.10.0.8:13800"}, url4)
-        time.sleep(180)
+        time.sleep(6)
         print("#################################################################")
         print("View change triggered. {v, x, y, z} -> {v, y, z}")
         print("The balance quality is " + balanceQuality([listOfPorts[0], listOfPorts[3], listOfPorts[4]]))
@@ -154,10 +154,10 @@ async def tests():
         if(keyCountAtX != "0"):
             print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "red"))
         print("#################################################################\n")
-        subprocess.call("./recon.sh")
+        subprocess.call("./view_hashes.sh")
 
         sendViewChange({"view":"10.10.0.7:13800,10.10.0.8:13800"}, url4)
-        time.sleep(180)
+        time.sleep(6)
         print("#################################################################")
         print("View change triggered. {v, y, z} -> {y, z}")
         print("The balance quality is " + balanceQuality([listOfPorts[3], listOfPorts[4]]))
@@ -167,10 +167,10 @@ async def tests():
         if(keyCountAtV != "0"):
             print("The number of keys stored at deprecated node v is: " + colored(keyCountAtV, "red"))
         print("#################################################################\n")
-        subprocess.call("./recon.sh")
+        subprocess.call("./view_hashes.sh")
 
         sendViewChange({"view":"10.10.0.4:13800,10.10.0.5:13800,10.10.0.6:13800,10.10.0.7:13800,10.10.0.8:13800"}, url4)
-        time.sleep(180)
+        time.sleep(6)
         print("#################################################################")
         print("View change triggered. {y, z} -> {v, w, x, y, z}")
         print("The balance quality is " + balanceQuality([listOfPorts[0], listOfPorts[1], listOfPorts[2], listOfPorts[3], listOfPorts[4]]))
@@ -178,60 +178,60 @@ async def tests():
         print("#################################################################\n")
         subprocess.call("./recon.sh")
     
-        # sendViewChange({"view":"10.10.0.4:13800,10.10.0.7:13800,10.10.0.8:13800"}, url4)
-        # time.sleep(180)
-        # print("#################################################################")
-        # print("View change triggered:")  
-        # print("{v, w, x, y, z} -> {v, y, z}")
-        # print("The balance quality is " + balanceQuality([listOfPorts[0], listOfPorts[3], listOfPorts[4]]))
-        # keyCountAtW = str(keyCountAtNode( listOfPorts[1] ).json()["key-count"])
-        # keyCountAtX = str(keyCountAtNode( listOfPorts[2] ).json()["key-count"])
-        # if(keyCountAtW == "0"):
-        #     print("The number of keys stored at deprecated node w is: " + colored(keyCountAtW, "green"))
-        # if(keyCountAtW != "0"):
-        #     print("The number of keys stored at deprecated node w is: " + colored(keyCountAtW, "red"))
-        # if(keyCountAtX == "0"):
-        #     print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "green"))
-        # if(keyCountAtX != "0"):
-        #     print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "red"))
-        # print("#################################################################\n")
-        # subprocess.call("./recon.sh")
+        sendViewChange({"view":"10.10.0.4:13800,10.10.0.7:13800,10.10.0.8:13800"}, url4)
+        time.sleep(6)
+        print("#################################################################")
+        print("View change triggered:")  
+        print("{v, w, x, y, z} -> {v, y, z}")
+        print("The balance quality is " + balanceQuality([listOfPorts[0], listOfPorts[3], listOfPorts[4]]))
+        keyCountAtW = str(keyCountAtNode( listOfPorts[1] ).json()["key-count"])
+        keyCountAtX = str(keyCountAtNode( listOfPorts[2] ).json()["key-count"])
+        if(keyCountAtW == "0"):
+            print("The number of keys stored at deprecated node w is: " + colored(keyCountAtW, "green"))
+        if(keyCountAtW != "0"):
+            print("The number of keys stored at deprecated node w is: " + colored(keyCountAtW, "red"))
+        if(keyCountAtX == "0"):
+            print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "green"))
+        if(keyCountAtX != "0"):
+            print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "red"))
+        print("#################################################################\n")
+        subprocess.call("./view_hashes.sh")
 
-        # sendViewChange({"view":"10.10.0.6:13800"}, url4)
-        # time.sleep(180)
-        # print("#################################################################")
-        # print("View change triggered: {v, y, z} -> {x}")
-        # print("The balance quality is: " + balanceQuality( [listOfPorts[2]] ))
-        # keyCountAtV = str(keyCountAtNode( listOfPorts[0] ).json()["key-count"])
-        # keyCountAtY = str(keyCountAtNode( listOfPorts[3] ).json()["key-count"])
-        # keyCountAtZ = str(keyCountAtNode( listOfPorts[4] ).json()["key-count"])
-        # if(keyCountAtV == "0"):
-        #     print("The number of keys stored at deprecated node v is: " + colored(keyCountAtV, "green"))
-        # if(keyCountAtV != "0"):
-        #     print("The number of keys stored at deprecated node v is: " + colored(keyCountAtV, "red"))
-        # if(keyCountAtY == "0"):
-        #     print("The number of keys stored at deprecated node y is: " + colored(keyCountAtY, "green"))
-        # if(keyCountAtY != "0"):
-        #     print("The number of keys stored at deprecated node y is: " + colored(keyCountAtY, "red"))
-        # if(keyCountAtZ == "0"):
-        #     print("The number of keys stored at deprecated node z is: " + colored(keyCountAtZ, "green"))
-        # if(keyCountAtZ != "0"):
-        #     print("The number of keys stored at deprecated node z is: " + colored(keyCountAtZ, "red"))
-        # print("#################################################################\n")
-        # subprocess.call("./recon.sh")
+        sendViewChange({"view":"10.10.0.6:13800"}, url4)
+        time.sleep(6)
+        print("#################################################################")
+        print("View change triggered: {v, y, z} -> {x}")
+        print("The balance quality is: " + balanceQuality( [listOfPorts[2]] ))
+        keyCountAtV = str(keyCountAtNode( listOfPorts[0] ).json()["key-count"])
+        keyCountAtY = str(keyCountAtNode( listOfPorts[3] ).json()["key-count"])
+        keyCountAtZ = str(keyCountAtNode( listOfPorts[4] ).json()["key-count"])
+        if(keyCountAtV == "0"):
+            print("The number of keys stored at deprecated node v is: " + colored(keyCountAtV, "green"))
+        if(keyCountAtV != "0"):
+            print("The number of keys stored at deprecated node v is: " + colored(keyCountAtV, "red"))
+        if(keyCountAtY == "0"):
+            print("The number of keys stored at deprecated node y is: " + colored(keyCountAtY, "green"))
+        if(keyCountAtY != "0"):
+            print("The number of keys stored at deprecated node y is: " + colored(keyCountAtY, "red"))
+        if(keyCountAtZ == "0"):
+            print("The number of keys stored at deprecated node z is: " + colored(keyCountAtZ, "green"))
+        if(keyCountAtZ != "0"):
+            print("The number of keys stored at deprecated node z is: " + colored(keyCountAtZ, "red"))
+        print("#################################################################\n")
+        subprocess.call("./view_hashes.sh")
 
-        # sendViewChange({"view":"10.10.0.7:13800"}, url2)
-        # time.sleep(180)
-        # print("#################################################################")
-        # print("View change triggered: {x} -> {y}")
-        # print("The balance quality is: " + balanceQuality( [listOfPorts[3]] ))
-        # keyCountAtX = str(keyCountAtNode( listOfPorts[2] ).json()["key-count"])
-        # if(keyCountAtX == "0"):
-        #     print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "green"))
-        # if(keyCountAtX != "0"):
-        #     print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "red"))
-        # print("#################################################################\n")
-        # subprocess.call("./recon.sh")
+        sendViewChange({"view":"10.10.0.7:13800"}, url2)
+        time.sleep(6)
+        print("#################################################################")
+        print("View change triggered: {x} -> {y}")
+        print("The balance quality is: " + balanceQuality( [listOfPorts[3]] ))
+        keyCountAtX = str(keyCountAtNode( listOfPorts[2] ).json()["key-count"])
+        if(keyCountAtX == "0"):
+            print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "green"))
+        if(keyCountAtX != "0"):
+            print("The number of keys stored at deprecated node x is: " + colored(keyCountAtX, "red"))
+        print("#################################################################\n")
+        subprocess.call("./view_hashes.sh")
 
 async def main():
 
