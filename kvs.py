@@ -38,23 +38,10 @@ def sender(location, extension, key, request_type, payload):
     resp_data = resp.json()
     return resp_data, resp.status_code
 
-def optimized_send(key, payload):
-    key_hash_id = state.maps_to(key)
-    if len(state.finger_table) == 1:
-        return sender(state.finger_table[0][1],"kvs/keys",key,"p")
-    if len(state.finger_table) > 1:
-        bounds = state.maps_to(key_hash_id)
-        if bounds["upper bound"][2] == 1:
-            pred_of_first_finger = state.immediate_pred(bounds["upper bound"][0])
-            if key_hash_id > pred_of_first_finger and key_hash_id <= bounds["upper bound"][0]: return sender(bounds["upper bound"][1],"store_key",key,"p",payload)
-            else: return sender(bounds["lower bound"][1],"kvs/keys",key,"p",payload)
-        else: return sender(bounds["lower bound"][1],"kvs/keys",key,"p",payload)
-
 def full_send(addr, route):
     global state
     fail_flag = False
     delete_dict = copy.deepcopy(state.storage)
-    #app.logger.info("Here's new_view from full_send(): " + str(new_view))
     for key in delete_dict:
         payload = {"value":state.storage[key],"address":state.address}
         del state.storage[key]
@@ -67,16 +54,13 @@ def full_send(addr, route):
 
 @app.route('/kvs/view-change', methods=['PUT'])
 def view_change():
-
     global state
     view_str = request.get_json()["view"]
     view_list = sorted(view_str.split(','))
     payload = {"view":view_list}
-
     state_view_set = set(state.view)
     new_view_set   = set(view_list)
     broadcast_set  = new_view_set.union(state_view_set)
-
     #Broadcasting the view
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = [executor.submit(sender,address,"view-change-action",None,"v",payload) for address in broadcast_set]
@@ -91,8 +75,7 @@ def view_change():
     for x in range(len(result_collection)):
         if result_collection[x][1] != 200:
             return json.dumps({"message":"View change unsuccessful."}), 500
-    state.previous_view.clear()
-    state.previous_local_ids_and_preds.clear()
+    state.data_structure_clear(3)
     #Polling the shards and gathering the key-counts
     shards = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -100,24 +83,22 @@ def view_change():
     result_collection = [f.result() for f in futures]
     for x in range(len(result_collection)):
         shards.append({"address":view_list[x],"key-count":result_collection[x][0]["key-count"]})
-        #app.logger.info("here's result " + str(x) + " " + str(result_collection[x]))
     return json.dumps({"message":"View change successful","shards":shards}), 200
 
 @app.route('/view-change-action', methods=['PUT'])
 def view_change_action():
     global state
-    new_view = request.get_json()["view"]
     state.previous_view = copy.deepcopy(state.view)
-    state.view = copy.deepcopy(new_view)
-    state.finger_table.clear()
-    if state.address in state.view: state.gen_finger_table(new_view)
+    state.view = request.get_json()["view"]
+    state.data_structure_clear(2)
+    if state.address in state.view: state.gen_finger_table(state.view)
     return json.dumps({"message":"View received and finger table generated."}), 200
 
 @app.route('/distribute_data', methods=['PUT'])
 def data_distribute():
 
     global state
-    if state.view == state.previous_view: return json.dumps({"message": "Redistribution of data successful."})
+    if state.view == state.previous_view: return json.dumps({"message": "Redistribution of data successful."}), 200
     if len(state.view) == 1: return full_send(state.view[0], "store_key")
     local_addr_in_view = state.address in state.view
     if not local_addr_in_view: return full_send(state.view[0], "kvs/keys")
@@ -137,7 +118,7 @@ def data_distribute():
                     del state.storage[key]
                     resp = sender(state.address,"kvs/keys",key,"p",payload)
                     if resp[1] != 200 and resp[1] != 201: return json.dumps({"message":"Redistribution of data unsuccessful."})
-        return json.dumps({"message":"Redistribution of data successful."})
+        return json.dumps({"message":"Redistribution of data successful."}), 200
                 
 ########################################### Key Value Store Endpoints ######################################################
 

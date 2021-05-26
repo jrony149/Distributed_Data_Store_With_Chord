@@ -1,12 +1,15 @@
-from app import app
-from hashlib import sha1
+import copy
+import math
 import os
-import requests
 import random
 import threading
+from hashlib import sha1
+
+import requests
+
+from app import app
 from CircularList import CreateList
-import math
-import copy
+
 
 class State():
     def __init__(self):
@@ -85,7 +88,7 @@ class State():
         temp_list = []
         [temp_list.append(x) for x in self.finger_table if x not in temp_list]
         self.finger_table = sorted(temp_list)
-        self.data_structure_clear()
+        self.data_structure_clear(1)
         return 0
 
     def maps_to(self, key):
@@ -123,7 +126,6 @@ class State():
             else: return False
 
         low,mid,high = 0,0,(len(list_of_ranges) - 1)
-        app.logger.info("Hello from find_range 2!!")
         while low <= high:
             mid,lower_bound,upper_bound = ((high + low) // 2),list_of_ranges[mid][1][0],list_of_ranges[mid][0]
             if key_hash_id > lower_bound and key_hash_id <= upper_bound: return True
@@ -132,10 +134,16 @@ class State():
             elif key_hash_id > upper_bound:low = mid + 1
         return False
 
-    def data_structure_clear(self):
-        self.cl.deleteAll()
-        self.map.clear()
-        self.indices.clear()
+    def data_structure_clear(self,clear_phase):
+        if clear_phase == 1:
+            self.cl.deleteAll()
+            self.map.clear()
+            self.indices.clear()
+        if clear_phase == 2:
+            self.finger_table.clear()
+        if clear_phase == 3:
+            self.previous_local_ids_and_preds.clear()
+            self.previous_view.clear()
 
     def hash_and_store_address(self, address):
         hash = State.hash_key(address)
